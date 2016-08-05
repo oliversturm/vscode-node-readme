@@ -20,15 +20,28 @@
   ],
   "main": "./out/src/extension",
   "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "node-readme configuration",
+      "properties": {
+        "node-readme.moduleMappings": {
+          "type": "object",
+          "default": {},
+          "description": "A mapping of any module name, to it's documentation file (in markdown) that overrides the default documentation."
+        }
+      }
+    },
     "menus": {
       "editor/context": [
         {
           "when": "editorLangId == javascript",
-          "command": "nodeReadme.showReadme"
+          "command": "nodeReadme.showReadme",
+          "group": "navigation"
         },
         {
           "when": "editorLangId == typescript",
-          "command": "nodeReadme.showReadme"
+          "command": "nodeReadme.showReadme",
+          "group": "navigation"
         }
       ]
     },

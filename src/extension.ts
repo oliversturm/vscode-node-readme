@@ -4,12 +4,15 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import {NpmDataProvider} from './npmdata';
 import {LocalDataProvider} from './localdata';
+import {RemoteContentProviderRegistry} from './remote-provider';
+import {RemoteProvidersIndex} from './remote-providers/index';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context) {
+    RemoteProvidersIndex.RegisterAll();
+
     let disposable = vscode.commands.registerCommand('nodeReadme.showReadme', () => {
         let e = vscode.window.activeTextEditor;
         let d = e.document;
@@ -60,17 +63,23 @@ export function activate(context) {
         // note that this hides moduleName in the outer scope
         thenable.then((moduleName) => {
 
+            let config = vscode.workspace.getConfiguration("node-readme");
+            let moduleMappings = config.get("moduleMappings");
+
+            if (moduleMappings[moduleName]) {
+                return vscode.commands.executeCommand("markdown.showPreviewToSide", vscode.Uri.parse(moduleMappings[moduleName]));
+            }
             // TODO move this fs.exists call into some public method on localdata
-            if (fs.existsSync(path.join(vscode.workspace.rootPath, "node_modules", moduleName, "readme.md"))) {
+            else if (fs.existsSync(path.join(vscode.workspace.rootPath, "node_modules", moduleName, "readme.md"))) {
                 return vscode.commands.executeCommand("markdown.showPreviewToSide", vscode.Uri.parse(`${LocalDataProvider.SchemaType}://disk.local/${moduleName}`));
             } else {
-                return vscode.commands.executeCommand("markdown.showPreviewToSide", vscode.Uri.parse(`${NpmDataProvider.SchemaType}://npmjs.org/${moduleName}`));
+                return vscode.commands.executeCommand("markdown.showPreviewToSide", vscode.Uri.parse(`${RemoteContentProviderRegistry.SchemaId}://registry.npmjs.org/${moduleName}`));
             }
         });
     });
     context.subscriptions.push(disposable,
-        vscode.workspace.registerTextDocumentContentProvider(NpmDataProvider.SchemaType, new NpmDataProvider()),
-        vscode.workspace.registerTextDocumentContentProvider(LocalDataProvider.SchemaType, new LocalDataProvider()));
+        vscode.workspace.registerTextDocumentContentProvider(LocalDataProvider.SchemaType, new LocalDataProvider()),
+        vscode.workspace.registerTextDocumentContentProvider(RemoteContentProviderRegistry.SchemaId, new RemoteContentProviderRegistry()));
 }
 
 // this method is called when your extension is deactivated
